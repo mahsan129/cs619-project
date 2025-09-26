@@ -12,6 +12,10 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 
 from pathlib import Path
 
+# ye lines add ki hain
+from pathlib import Path
+from datetime import timedelta   # ← yeh line add karo (JWT lifetimes ke liye)
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -25,7 +29,10 @@ SECRET_KEY = 'django-insecure-drne4$blwwwo95ll%(tswn)6*0*hr9)!ubr+xq&r(63@y1s8o1
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+
+
+
+
 
 
 # Application definition
@@ -37,9 +44,22 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+
+    # ye lines add ki hai
+    'rest_framework',
+    
+    'users',
+    'products',
+    'orders',
+    'suppliers',
+    'bids',
+
 ]
 
 MIDDLEWARE = [
+    # ye add ki hai
+    'corsheaders.middleware.CorsMiddleware',
+
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -48,6 +68,12 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
+
+
+# ----  ye lines add ki hain
+# ----
+CORS_ALLOW_ALL_ORIGINS = True
+
 
 ROOT_URLCONF = 'myproject.urls'
 
@@ -78,6 +104,15 @@ DATABASES = {
         'NAME': BASE_DIR / 'db.sqlite3',
     }
 }
+
+# ye lines add ki hain
+ALLOWED_HOSTS = []
+AUTH_USER_MODEL = 'users.User'
+
+
+# Production me specific origins use karo (example):
+# CORS_ALLOWED_ORIGINS = ["http://localhost:5173", "http://127.0.0.1:5173"]
+
 
 
 # Password validation
@@ -120,3 +155,24 @@ STATIC_URL = 'static/'
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+
+
+
+
+#ye bhi add kiya hai
+# ---- DRF + JWT ----
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': (
+        'rest_framework_simplejwt.authentication.JWTAuthentication',  # Bearer <access>
+    ),
+    # Optional: default permissions (abhi open rakho; later tighten)
+    # 'DEFAULT_PERMISSION_CLASSES': ('rest_framework.permissions.IsAuthenticated',),
+}
+
+SIMPLE_JWT = {
+    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=60),  # dev-friendly
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=7),
+    # Optional tweaks:
+    # 'AUTH_HEADER_TYPES': ('Bearer',),
+}
