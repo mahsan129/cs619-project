@@ -1,0 +1,6 @@
+* { box-sizing: border-box; }
+body { margin: 0; font-family: system-ui, Arial, sans-serif; }
+.card { display: flex; flex-direction: column; gap: 10px; padding: 16px; border: 1px solid #ddd; border-radius: 8px; }
+input, button { padding: 10px; border: 1px solid #ccc; border-radius: 6px; }
+button { cursor: pointer; }
+a { color: inherit; }
