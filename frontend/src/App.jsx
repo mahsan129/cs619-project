@@ -3,6 +3,7 @@ import ProtectedRoute from "./components/ProtectedRoute";
 import Nav from "./components/Nav";
 import Dashboard from "./pages/Dashboard";
 import Login from "./pages/Login";
+import Catalog from "./pages/Catalog";
 
 export default function App() {
   return (
@@ -10,6 +11,17 @@ export default function App() {
       <Routes>
         <Route path="/login" element={<Login />} />
         {/* Protected group */}
+        <Route
+  path="/catalog"
+  element={
+    <>
+      <Nav />
+      <div style={{ paddingTop: 8 }}>
+        <Catalog />
+      </div>
+    </>
+  }
+/>
         <Route element={<ProtectedRoute />}>
           <Route
             path="/"
