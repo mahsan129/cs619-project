@@ -29,6 +29,7 @@ urlpatterns = [
 
     # ✅ products API (no direct class imports here)
     path('api/', include('products.urls')),
+    path('api/', include('orders.urls')),
 ]
 
 

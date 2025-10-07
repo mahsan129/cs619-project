@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Category, Material, PriceTier
+from .models import Category, Material, PriceTier, Alert
 
 class CategorySerializer(serializers.ModelSerializer):
     class Meta:
@@ -55,3 +55,12 @@ class MaterialCatalogSerializer(serializers.ModelSerializer):
         desired = "WHOLESALE" if role in ("WHOLESALER","ADMIN") else "RETAIL"
         _, t = self._pick_price(obj, desired)
         return t
+    
+    # (your existing CategorySerializer/MaterialSerializer/PriceTierSerializer/MaterialCatalogSerializer...)
+
+class AlertSerializer(serializers.ModelSerializer):
+    material_sku = serializers.ReadOnlyField(source="material.sku")
+    material_title = serializers.ReadOnlyField(source="material.title")
+    class Meta:
+        model = Alert
+        fields = ["id","type","is_resolved","note","material","material_sku","material_title","created_at","updated_at"]
