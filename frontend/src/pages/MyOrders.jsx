@@ -1,10 +1,13 @@
 import { useEffect, useState } from "react";
 import client from "../api/client";
 
+
 export default function MyOrders() {
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState("");
+
+  
 
   useEffect(() => {
     (async () => {
@@ -35,6 +38,7 @@ export default function MyOrders() {
               <th>Items</th>
               <th>Total (Rs)</th>
               <th>Placed</th>
+              <th>Invoice</th>
             </tr>
           </thead>
           <tbody>
@@ -45,11 +49,30 @@ export default function MyOrders() {
                 <td align="center">{o.item_count}</td>
                 <td align="right">{Number(o.total).toLocaleString()}</td>
                 <td align="center">{new Date(o.created_at).toLocaleString()}</td>
+                <td align="center">
+                 <button onClick={() => downloadInvoice(o.id)}>Download</button>
+                </td>
               </tr>
             ))}
           </tbody>
         </table>
       )}
+   
     </div>
   );
+  const downloadInvoice = async (id) => {
+  try {
+    const res = await client.get(`/orders/${id}/invoice.pdf`, { responseType: "blob" });
+    const blob = new Blob([res.data], { type: "application/pdf" });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `invoice_${id}.pdf`;
+    a.click();
+    URL.revokeObjectURL(url);
+  } catch (e) {
+    alert("Failed to download invoice");
+    console.error(e);
+  }
+};
 }

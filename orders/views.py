@@ -14,6 +14,13 @@ from .serializers import CartItemSerializer, CheckoutSerializer, OrderSerializer
 from products.models import PriceTier, Material
 from .serializers import ReviewSerializer, SalesRowSerializer
 
+from io import BytesIO
+from django.http import HttpResponse
+from django.template.loader import get_template
+from xhtml2pdf import pisa
+from .models import Order
+
+
 
 class CartViewSet(viewsets.ModelViewSet):
     """
@@ -306,3 +313,29 @@ def sales_report_view(request):
     data = [{"day": r["day"], "orders": r["orders"], "revenue": r["revenue"] or 0} for r in rows]
     ser = SalesRowSerializer(data, many=True)
     return Response(ser.data)
+
+def _render_pdf_from_template(template_name, context):
+    html = get_template(template_name).render(context)
+    result = BytesIO()
+    pisa.CreatePDF(src=html, dest=result)  # returns pisaStatus, but result has PDF bytes
+    return result.getvalue()
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def invoice_pdf_view(request, pk: int):
+    """
+    GET /api/orders/<id>/invoice.pdf
+    - Only owner or ADMIN can download
+    """
+    try:
+        order = Order.objects.select_related("user").prefetch_related("items").get(pk=pk)
+    except Order.DoesNotExist:
+        return Response({"detail": "Order not found"}, status=404)
+
+    if getattr(request.user, "role", "") != "ADMIN" and order.user_id != request.user.id:
+        return Response({"detail": "Not allowed"}, status=403)
+
+    pdf_bytes = _render_pdf_from_template("invoice.html", {"order": order})
+    resp = HttpResponse(pdf_bytes, content_type="application/pdf")
+    resp["Content-Disposition"] = f'attachment; filename="invoice_{order.pk}.pdf"'
+    return resp

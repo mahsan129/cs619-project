@@ -22,7 +22,7 @@ export default function AuthProvider({ children }) {
     setLoadingMe(true);
     try {
       const { data } = await client.get("/auth/me/");
-      setUser(data); // {id, username, email, role}
+    setUser(prev => ({ ...data, role: (data.role || "").toUpperCase() }));
     } catch {
       setUser(null);
     } finally {

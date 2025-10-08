@@ -18,6 +18,7 @@ from django.contrib import admin
 from django.urls import path, include
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 from users.views import RegisterView, me_view
+from myproject.views import health_view
 
 urlpatterns = [
     path('admin/', admin.site.urls),
@@ -28,9 +29,17 @@ urlpatterns = [
     ,path('api/auth/me/',      me_view, name='me'),
 
     # ✅ products API (no direct class imports here)
+      path("admin/", admin.site.urls),
+    path("api/health/", health_view),                 # ✅ health check
+    path("api/", include("users.urls")),
     path('api/', include('products.urls')),
     path('api/', include('orders.urls')),
+    path('api/', include('bids.urls')),  
 ]
+
+# Custom JSON error handlers
+handler404 = "myproject.views.handler404"
+handler500 = "myproject.views.handler500"
 
 
 

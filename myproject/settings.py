@@ -12,12 +12,16 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 
 from pathlib import Path
 
+
 # ye lines add ki hain
 from pathlib import Path
 from datetime import timedelta   # ← yeh line add karo (JWT lifetimes ke liye)
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
+
+
+
 
 
 # Quick-start development settings - unsuitable for production
@@ -29,6 +33,29 @@ SECRET_KEY = 'django-insecure-drne4$blwwwo95ll%(tswn)6*0*hr9)!ubr+xq&r(63@y1s8o1
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
+# ---- DRF defaults: auth required by default + throttling ----
+REST_FRAMEWORK = {
+    "DEFAULT_AUTHENTICATION_CLASSES": (
+        "rest_framework_simplejwt.authentication.JWTAuthentication",
+    ),
+    "DEFAULT_PERMISSION_CLASSES": (
+        "rest_framework.permissions.IsAuthenticated",
+    ),
+    "DEFAULT_THROTTLE_CLASSES": [
+        "rest_framework.throttling.AnonRateThrottle",
+        "rest_framework.throttling.UserRateThrottle",
+    ],
+    "DEFAULT_THROTTLE_RATES": {
+        "anon": "50/hour",    # public endpoints
+        "user": "1000/day",   # per authed user
+    },
+    "EXCEPTION_HANDLER": "myproject.exceptions.custom_exception_handler",
+}
+
+SIMPLE_JWT = {
+    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=60),
+    "REFRESH_TOKEN_LIFETIME": timedelta(days=7),
+}
 
 
 
@@ -53,7 +80,8 @@ INSTALLED_APPS = [
     'orders',
     'suppliers',
     'bids',
-
+    'corsheaders',
+    'core',
 ]
 
 MIDDLEWARE = [
@@ -67,12 +95,14 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'corsheaders.middleware.CorsMiddleware',
 ]
 
 
 # ----  ye lines add ki hain
 # ----
 CORS_ALLOW_ALL_ORIGINS = True
+
 
 
 ROOT_URLCONF = 'myproject.urls'
@@ -92,6 +122,8 @@ TEMPLATES = [
     },
 ]
 
+
+TEMPLATES[0]["DIRS"] = [BASE_DIR / "templates"]
 WSGI_APPLICATION = 'myproject.wsgi.application'
 
 
@@ -156,23 +188,22 @@ STATIC_URL = 'static/'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-
-
-
-
-#ye bhi add kiya hai
-# ---- DRF + JWT ----
-REST_FRAMEWORK = {
-    'DEFAULT_AUTHENTICATION_CLASSES': (
-        'rest_framework_simplejwt.authentication.JWTAuthentication',  # Bearer <access>
-    ),
-    # Optional: default permissions (abhi open rakho; later tighten)
-    # 'DEFAULT_PERMISSION_CLASSES': ('rest_framework.permissions.IsAuthenticated',),
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "handlers": {"console": {"class": "logging.StreamHandler"}},
+    "root": {"handlers": ["console"], "level": "INFO"},
 }
 
-SIMPLE_JWT = {
-    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=60),  # dev-friendly
-    'REFRESH_TOKEN_LIFETIME': timedelta(days=7),
-    # Optional tweaks:
-    # 'AUTH_HEADER_TYPES': ('Bearer',),
-}
+# ---- Health/version meta ----
+APP_NAME = "CS619 Construction Materials"
+APP_VERSION = "1.0.0"
+
+
+
+# Mock emails to console (Dev)
+EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
+DEFAULT_FROM_EMAIL = "noreply@cs619.local"
+
+# (optional but handy in templates)
+STATIC_URL = "static/"
