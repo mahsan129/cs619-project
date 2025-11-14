@@ -50,9 +50,16 @@ REST_FRAMEWORK = {
         "user": "1000/day",   # per authed user
     },
     "EXCEPTION_HANDLER": "myproject.exceptions.custom_exception_handler",
+     "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
+    "PAGE_SIZE": 8,   # har page pe 8 cards
+
+    "DEFAULT_FILTER_BACKENDS": [
+        "django_filters.rest_framework.DjangoFilterBackend",
+    ],
 }
 
 SIMPLE_JWT = {
+     "AUTH_HEADER_TYPES": ("Bearer",),
     "ACCESS_TOKEN_LIFETIME": timedelta(minutes=60),
     "REFRESH_TOKEN_LIFETIME": timedelta(days=7),
 }
@@ -74,7 +81,7 @@ INSTALLED_APPS = [
 
     # ye lines add ki hai
     'rest_framework',
-    
+    "django_filters",
     'users',
     'products',
     'orders',

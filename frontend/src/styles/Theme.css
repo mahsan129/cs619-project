@@ -1,0 +1,269 @@
+/* ──────────────────────────────────────────────
+   🏗 ASBuildMart — Dark Gray Theme
+   Navbar & Footer: Dark Charcoal
+   Accent: Orange
+────────────────────────────────────────────── */
+
+/* ====== COLOR VARIABLES ====== */
+:root {
+  --primary: #292e36;       /* Dark Charcoal for nav/footer */
+  --accent: #F97316;        /* Orange - Calls to Action */
+  --blue: #60A5FA;          /* Soft Blue highlight */
+  --bg: #F9FAFB;            /* Page Background */
+  --text-dark: #111827;
+  --text-light: #6B7280;
+  --success: #10B981;
+  --danger: #DC2626;
+}
+
+/* ====== GLOBAL STYLES ====== */
+body {
+  font-family: "Inter", "Segoe UI", Roboto, sans-serif;
+  background-color: var(--bg);
+  color: var(--text-dark);
+  margin: 0;
+  padding: 0;
+  line-height: 1.6;
+}
+
+a {
+  color: var(--blue);
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+a:hover {
+  color: var(--accent);
+}
+
+/* ====== NAVBAR ====== */
+/* ─── NAVBAR ─── */
+
+
+/* Ensure page content doesn't hide under navbar */
+body {
+  padding-top: 80px;           /* ✅ Pushes content below navbar */
+}
+
+nav {
+  background-color: var(--primary);
+  color: #f3f4f6;
+  width: 100vw;               /* ✅ Full window width */
+  position: fixed;            /* ✅ Stays at top while scrolling */
+  top: 0;
+  left: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 48px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+
+.nav .brand {
+  font-size: 22px;
+  font-weight: 700;
+  color: white;
+  text-decoration: none;
+}
+.nav .brand span {
+  color: #f97316; /* Orange accent */
+}
+
+.nav .links a {
+  color: white;
+  margin: 0 14px;
+  text-decoration: none;
+  font-weight: 500;
+  transition: color 0.3s ease;
+}
+.nav .links a:hover {
+  color: #f97316;
+}
+
+.nav .auth .btn {
+  background-color: #f97316;
+  color: white;
+  border: none;
+  padding: 8px 14px;
+  border-radius: 6px;
+  cursor: pointer;
+  text-decoration: none;
+  font-weight: 600;
+}
+.nav .auth .btn.ghost {
+  background: transparent;
+  border: 1px solid #f97316;
+  color: #f97316;
+}
+.nav .auth .btn.ghost:hover {
+  background: #f97316;
+  color: white;
+}
+
+/* ====== BUTTONS ====== */
+.btn {
+  display: inline-block;
+  background: var(--accent);
+  color: white;
+  border: none;
+  border-radius: 6px;
+  padding: 8px 16px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.25s ease, transform 0.1s ease;
+}
+.btn:hover {
+  background: #ea580c;
+  transform: translateY(-1px);
+}
+.btn.ghost {
+  background: transparent;
+  color: white;
+  border: 1px solid #e5e7eb;
+}
+.btn.ghost:hover {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+/* ====== SECTIONS ====== */
+.section {
+  padding: 80px 0;
+}
+.section.light {
+  background-color: white;
+}
+.section-title {
+  text-align: center;
+  font-size: 1.8rem;
+  margin-bottom: 18px;
+  color: var(--primary);
+}
+.section-sub {
+  text-align: center;
+  color: var(--text-light);
+  margin-bottom: 40px;
+}
+
+/* ====== HERO ====== */
+.hero {
+  position: relative;
+  background: url("/images/hero-bg.jpg") center/cover no-repeat;
+  color: #fff;
+  height: 85vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+.hero .overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+}
+.hero-inner {
+  position: relative;
+  z-index: 2;
+  max-width: 800px;
+}
+.hero h1 {
+  font-size: 2.6rem;
+  font-weight: 700;
+}
+.hero h1 span {
+  color: var(--accent);
+}
+.hero-sub {
+  margin-top: 16px;
+  color: #d1d5db;
+}
+.hero .cta {
+  margin-top: 32px;
+  display: flex;
+  gap: 16px;
+  justify-content: center;
+}
+
+/* ====== CARDS ====== */
+.grid {
+  display: grid;
+  gap: 24px;
+}
+.cards-4 {
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+.card {
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+  padding: 16px;
+  text-align: center;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 4px 10px rgba(0,0,0,0.12);
+}
+.card img {
+  width: 100%;
+  height: 150px;
+  object-fit: cover;
+  border-radius: 6px;
+}
+.card h3 {
+  margin: 12px 0 8px;
+}
+.card p.price {
+  font-weight: 600;
+  color: var(--accent);
+}
+
+/* ====== FOOTER ====== */
+.footer {
+  background: var(--primary);
+  color: #e5e7eb;
+  padding: 60px 0 20px;
+}
+.footer-grid {
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 32px;
+}
+.footer h4 {
+  margin-bottom: 12px;
+  color: #fff;
+}
+.footer a {
+  color: #e5e7eb;
+  font-size: 0.95rem;
+}
+.footer a:hover {
+  color: var(--accent);
+}
+.footer .subscribe {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}
+.footer input[type="email"] {
+  flex: 1;
+  padding: 8px;
+  border-radius: 6px;
+  border: none;
+  outline: none;
+}
+.footer .btn {
+  padding: 8px 14px;
+}
+.footer-bottom {
+  margin-top: 40px;
+  border-top: 1px solid #374151;
+  padding-top: 16px;
+  text-align: center;
+  font-size: 0.9rem;
+  color: #9ca3af;
+}
+@media (max-width: 900px) {
+  .navbar-inner { grid-template-columns: 1fr auto; }
+  .links { display: none; } /* hide center links on small screens (simple) */
+}

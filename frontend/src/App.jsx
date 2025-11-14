@@ -1,30 +1,28 @@
-import { Routes, Route, Navigate, Outlet } from "react-router-dom";
-import ProtectedRoute from "./components/ProtectedRoute";
-import RequireRole from "./components/RequireRole";
+// src/App.jsx
+import { Routes, Route } from "react-router-dom";
+import RequireAdmin from "./components/RequireAdmin";
 
-import Nav from "./components/Nav";
-import Dashboard from "./pages/Dashboard";
+import Landing from "./pages/Landing";
 import Login from "./pages/Login";
+import Register from "./pages/Register";
+import Nav from "./components/Nav";
+import ProtectedRoute from "./components/ProtectedRoute";
+
+import Dashboard from "./pages/Dashboard";
 import Catalog from "./pages/Catalog";
 import Cart from "./pages/Cart";
 import Checkout from "./pages/Checkout";
 import MyOrders from "./pages/MyOrders";
-import AdminOrders from "./pages/AdminOrders";
+import AdminOrders from "./pages/AdminOrders";   // ✅ yahi admin ki file hai
 import Inventory from "./pages/Inventory";
 import BulkRequests from "./pages/BulkRequests";
 import SupplierBids from "./pages/SupplierBids";
-import Reviews from "./pages/Reviews";
-import Reports from "./pages/Reports";
 
-
-// Simple layout to avoid repeating <Nav/> everywhere
-function AppLayout() {
+function WithNav({ children }) {
   return (
     <>
       <Nav />
-      <div style={{ paddingTop: 8 }}>
-        <Outlet />
-      </div>
+      <div style={{ paddingTop: 8 }}>{children}</div>
     </>
   );
 }
@@ -32,46 +30,38 @@ function AppLayout() {
 export default function App() {
   return (
     <Routes>
-      {/* Public */}
+      {/* ─── Public Routes ─── */}
+      <Route path="/" element={<Landing />} />
       <Route path="/login" element={<Login />} />
+      <Route path="/register" element={<Register />} />
 
-      {/* Protected area */}
-      <Route element={<ProtectedRoute />}>
-        <Route element={<AppLayout />}>
-          {/* Common for all logged-in roles */}
-          <Route index element={<Navigate to="/dashboard" replace />} />
-          <Route path="/dashboard" element={<Dashboard />} />
-          <Route path="/catalog" element={<Catalog />} />
-          <Route path="/reviews" element={<Reviews />} />
-
-          {/* Customer / Retailer */}
-          <Route element={<RequireRole allow={["CUSTOMER","RETAILER","ADMIN"]} />}>
-            <Route path="/cart" element={<Cart />} />
-            <Route path="/checkout" element={<Checkout />} />
-            <Route path="/orders" element={<MyOrders />} />
-          </Route>
-
-          {/* Wholesaler / Retailer: Bulk Requests */}
-          <Route element={<RequireRole allow={["WHOLESALER","RETAILER","ADMIN"]} />}>
-            <Route path="/bulk-requests" element={<BulkRequests />} />
-          </Route>
-
-          {/* Supplier: Bids */}
-          <Route element={<RequireRole allow={["SUPPLIER","ADMIN"]} />}>
-            <Route path="/bids" element={<SupplierBids />} />
-          </Route>
-
-          {/* Admin only */}
-          <Route element={<RequireRole allow={["ADMIN"]} />}>
-            <Route path="/admin-orders" element={<AdminOrders />} />
-            <Route path="/inventory" element={<Inventory />} />
-            <Route path="/reports" element={<Reports />} />
-          </Route>
-        </Route>
+      {/* ─── Admin-only ─── */}
+      <Route element={<RequireAdmin />}>
+        <Route
+          path="/admin"
+          element={
+            <WithNav>
+              <AdminOrders />   {/* ✅ yahan se naya admin design aaye ga */}
+            </WithNav>
+          }
+        />
       </Route>
 
-      {/* Fallback */}
-      <Route path="*" element={<Navigate to="/login" replace />} />
+      {/* ─── Protected Routes ─── */}
+      <Route element={<ProtectedRoute />}>
+        <Route path="/dashboard" element={<WithNav><Dashboard /></WithNav>} />
+        <Route path="/catalog"   element={<WithNav><Catalog /></WithNav>} />
+        <Route path="/cart"      element={<WithNav><Cart /></WithNav>} />
+        <Route path="/checkout"  element={<WithNav><Checkout /></WithNav>} />
+        <Route path="/orders"    element={<WithNav><MyOrders /></WithNav>} />
+        <Route path="/admin-orders" element={<WithNav><AdminOrders /></WithNav>} />
+        <Route path="/inventory" element={<WithNav><Inventory /></WithNav>} />
+        <Route path="/bulk-requests" element={<WithNav><BulkRequests /></WithNav>} />
+        <Route path="/bids"      element={<WithNav><SupplierBids /></WithNav>} />
+      </Route>
+
+      {/* ─── Fallback ─── */}
+      <Route path="*" element={<Landing />} />
     </Routes>
   );
 }

@@ -1,55 +1,84 @@
-import { createContext, useCallback, useEffect, useMemo, useState } from "react";
-import client, { tokenStore } from "../api/client";
+// src/context/AuthContext.jsx
+import { createContext, useEffect, useState } from "react";
+import api from "../api/client";
 
 export const AuthContext = createContext(null);
 
 export default function AuthProvider({ children }) {
-  const [tokens, setTokens] = useState(() => tokenStore.get());
-  const [user, setUser] = useState(null);
-  const [loadingMe, setLoadingMe] = useState(false);
-
-  // Persist tokens to localStorage
-  useEffect(() => {
-    tokenStore.set(tokens);
-  }, [tokens]);
-
-  // Fetch profile when tokens change
-  const loadMe = useCallback(async () => {
-    if (!tokens?.access) {
-      setUser(null);
-      return;
-    }
-    setLoadingMe(true);
+  const [tokens, setTokens] = useState(() => {
     try {
-      const { data } = await client.get("/auth/me/");
-    setUser(prev => ({ ...data, role: (data.role || "").toUpperCase() }));
+      return JSON.parse(localStorage.getItem("tokens"));
     } catch {
-      setUser(null);
-    } finally {
-      setLoadingMe(false);
+      return null;
     }
-  }, [tokens]);
+  });
+  const [user, setUser] = useState(null);
+  const [loadingMe, setLoadingMe] = useState(true);
 
   useEffect(() => {
+    let cancelled = false;
+
+    async function loadMe() {
+      try {
+        setLoadingMe(true);
+
+        if (tokens?.refresh && !tokens?.access) {
+          const r = await api.post("/auth/refresh/", { refresh: tokens.refresh });
+          if (!cancelled) {
+            const next = { ...tokens, access: r.data.access };
+            setTokens(next);
+            localStorage.setItem("tokens", JSON.stringify(next));
+          }
+        }
+
+        if (!tokens?.access) return;
+
+        const me = await api.get("/auth/me/");
+        if (!cancelled) setUser(me.data);
+      } catch {
+        if (!cancelled) {
+          setUser(null);
+          setTokens(null);
+          localStorage.removeItem("tokens");
+        }
+      } finally {
+        if (!cancelled) setLoadingMe(false);
+      }
+    }
+
     loadMe();
-  }, [loadMe]);
+    return () => {
+      cancelled = true;
+    };
+  }, [tokens]);
 
-  // Actions
-  const login = useCallback(async (username, password) => {
-    const { data } = await client.post("/auth/login/", { username, password });
-    setTokens(data); // {access, refresh}
-    return data;
-  }, []);
+  // ✅ yeh naya login function
+  const login = async (username, password) => {
+    const r = await api.post("/auth/login/", { username, password });
+    const nextTokens = r.data;
+    setTokens(nextTokens);
+    localStorage.setItem("tokens", JSON.stringify(nextTokens));
 
-  const logout = useCallback(() => {
-    setTokens(null);
+    const me = await api.get("/auth/me/");
+    setUser(me.data);
+    return me.data; // is se Login.jsx ko role mil jayega
+  };
+
+  const logout = () => {
     setUser(null);
-  }, []);
+    setTokens(null);
+    localStorage.removeItem("tokens");
+  };
 
-  const value = useMemo(
-    () => ({ tokens, user, loadingMe, login, logout, reloadProfile: loadMe }),
-    [tokens, user, loadingMe, login, logout, loadMe]
-  );
+  const value = {
+    tokens,
+    setTokens,
+    user,
+    setUser,
+    loadingMe,
+    login,     // ✅ make sure yahan expose ho
+    logout,
+  };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

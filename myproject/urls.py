@@ -1,45 +1,46 @@
-"""
-URL configuration for myproject project.
+# myproject/urls.py
 
-The `urlpatterns` list routes URLs to views. For more information please see:
-    https://docs.djangoproject.com/en/5.2/topics/http/urls/
-Examples:
-Function views
-    1. Add an import:  from my_app import views
-    2. Add a URL to urlpatterns:  path('', views.home, name='home')
-Class-based views
-    1. Add an import:  from other_app.views import Home
-    2. Add a URL to urlpatterns:  path('', Home.as_view(), name='home')
-Including another URLconf
-    1. Import the include() function: from django.urls import include, path
-    2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
-"""
 from django.contrib import admin
 from django.urls import path, include
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
-from users.views import RegisterView, me_view
+
+from users.views import register_view, me_view
 from myproject.views import health_view
+from users.views_admin import (
+    admin_metrics,
+    recent_orders,
+    low_stock_products,
+    revenue_series,
+)
 
 urlpatterns = [
-    path('admin/', admin.site.urls),
+    # Django admin
+    path("admin/", admin.site.urls),
 
-    path('api/auth/register/', RegisterView.as_view(), name='register')
-    ,path('api/auth/login/',   TokenObtainPairView.as_view(), name='token_obtain_pair')
-    ,path('api/auth/refresh/', TokenRefreshView.as_view(), name='token_refresh')
-    ,path('api/auth/me/',      me_view, name='me'),
+    # 🔐 Auth endpoints
+    path("api/auth/register/", register_view, name="register"),   # ✅ function, no .as_view()
+    path("api/auth/login/", TokenObtainPairView.as_view(), name="token_obtain_pair"),
+    path("api/auth/refresh/", TokenRefreshView.as_view(), name="token_refresh"),
+    path("api/auth/me/", me_view, name="me"),
 
-    # ✅ products API (no direct class imports here)
-      path("admin/", admin.site.urls),
-    path("api/health/", health_view),                 # ✅ health check
+    # (Optional) agar tum ne separate users.auth_urls banaya hai:
+    # path("api/auth/", include("users.auth_urls")),
+
+    # 📊 Admin dashboard APIs
+    path("api/admin/metrics/", admin_metrics),
+    path("api/admin/recent-orders/", recent_orders),
+    path("api/admin/low-stock/", low_stock_products),
+    path("api/admin/revenue-series/", revenue_series),
+
+    # 🩺 Health check
+    path("api/health/", health_view),
+
+    # App URLs
     path("api/", include("users.urls")),
-    path('api/', include('products.urls')),
-    path('api/', include('orders.urls')),
-    path('api/', include('bids.urls')),  
+    path("api/", include("products.urls")),
+    path("api/", include("orders.urls")),
 ]
 
 # Custom JSON error handlers
 handler404 = "myproject.views.handler404"
 handler500 = "myproject.views.handler500"
-
-
-

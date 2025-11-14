@@ -1,68 +1,142 @@
+# orders/serializers.py
+
+# orders/serializers.py
+
 from rest_framework import serializers
-from .models import CartItem, Address, Order, OrderItem, Review
+from .models import Order, OrderItem, CartItem, Address, Review
+
+
+# ─────────── CART (current user) ───────────
 
 class CartItemSerializer(serializers.ModelSerializer):
-    title = serializers.ReadOnlyField(source="material.title")
-    sku = serializers.ReadOnlyField(source="material.sku")
-    unit = serializers.ReadOnlyField(source="material.unit")
-    price = serializers.SerializerMethodField()
-    line_total = serializers.SerializerMethodField()
+    material_title = serializers.ReadOnlyField(source="material.title", default=None)
+    material_sku = serializers.ReadOnlyField(source="material.sku", default=None)
+    unit = serializers.ReadOnlyField(source="material.unit", default=None)
 
     class Meta:
         model = CartItem
-        fields = ["id", "material", "title", "sku", "unit", "qty", "price", "line_total"]
+        fields = [
+            "id",
+            "material",
+            "material_title",
+            "material_sku",
+            "unit",
+            "qty",
+        ]
 
-    # role-based effective price (retail for CUSTOMER/RETAILER, wholesale for WHOLESALER/ADMIN)
-    def _effective_price(self, obj):
-        prices = {p.type: p.price for p in obj.material.prices.all()}
-        role = (self.context.get("role") or "").upper()
-        desired = "WHOLESALE" if role in ("WHOLESALER", "ADMIN") else "RETAIL"
-        return prices.get(desired) or prices.get("RETAIL") or prices.get("WHOLESALE")
 
-    def get_price(self, obj):
-        return self._effective_price(obj)
+class CartSerializer(serializers.Serializer):
+    """
+    Simple cart summary:
+      items: list of CartItemSerializer
+      subtotal, tax, total: numbers
+    """
+    items = CartItemSerializer(many=True)
+    subtotal = serializers.DecimalField(max_digits=12, decimal_places=2)
+    tax = serializers.DecimalField(max_digits=12, decimal_places=2)
+    total = serializers.DecimalField(max_digits=12, decimal_places=2)
 
-    def get_line_total(self, obj):
-        p = self._effective_price(obj)
-        return (p * obj.qty) if p is not None else None
 
-# ---- Day 6 ----
+# ─────────── ADDRESS / CHECKOUT ───────────
 
 class AddressSerializer(serializers.ModelSerializer):
     class Meta:
         model = Address
         fields = ["id", "line1", "city", "state", "zip", "phone"]
 
+
+class CheckoutSerializer(AddressSerializer):
+    """
+    Checkout form ke fields (shipping address).
+    Views mein:
+        s = CheckoutSerializer(data=request.data)
+        s.is_valid(raise_exception=True)
+        data = s.validated_data
+    """
+    pass
+
+
+# ─────────── ORDERS (detail + items) ───────────
+
 class OrderItemSerializer(serializers.ModelSerializer):
+    material_title = serializers.ReadOnlyField(source="material.title", default=None)
+    material_sku = serializers.ReadOnlyField(source="material.sku", default=None)
+    unit = serializers.ReadOnlyField(source="material.unit", default=None)
+
     class Meta:
         model = OrderItem
-        fields = ["material", "title", "sku", "unit", "qty", "price", "line_total"]
+        fields = [
+            "id",
+            "material",
+            "material_title",
+            "material_sku",
+            "unit",
+            "qty",
+            "price",
+            "line_total",
+        ]
+
 
 class OrderSerializer(serializers.ModelSerializer):
-    items = OrderItemSerializer(many=True)
+    items = OrderItemSerializer(many=True, read_only=True)
+
     class Meta:
         model = Order
-        fields = ["id", "status", "address", "subtotal", "tax", "total", "created_at", "items"]
+        fields = [
+            "id",
+            "status",
+            "subtotal",
+            "tax",
+            "total",
+            "created_at",
+            "items",
+        ]
 
-class CheckoutSerializer(serializers.Serializer):
-    # Either pass a new address or (optional) re-use existing by id later (not required now)
-    address = AddressSerializer()
 
-    # orders/serializers.py  (add at bottom, keep existing imports/serializers)
+# ─────────── ORDER LIST (MyOrders / Admin Orders) ───────────
+
 class OrderListSerializer(serializers.ModelSerializer):
-    item_count = serializers.IntegerField(read_only=True)
+    user_username = serializers.ReadOnlyField(source="user.username", default=None)
+    items_count = serializers.SerializerMethodField()
+
     class Meta:
         model = Order
-        fields = ["id", "status", "address", "subtotal", "tax", "total", "created_at", "item_count"]
+        fields = [
+            "id",
+            "user",
+            "user_username",
+            "status",
+            "subtotal",
+            "tax",
+            "total",
+            "created_at",
+            "items_count",
+        ]
+
+    def get_items_count(self, obj):
+        return obj.items.count()
+
+
+# ─────────── REVIEW (Order review) ───────────
 
 class ReviewSerializer(serializers.ModelSerializer):
-    order_total = serializers.ReadOnlyField(source="order.total")
+    order_id = serializers.ReadOnlyField(source="order.id")
+
     class Meta:
         model = Review
-        fields = ["id", "order", "rating", "comment", "order_total", "created_at"]
-        read_only_fields = ["created_at"]
+        fields = ["id", "order", "order_id", "rating", "comment", "created_at"]
+
+
+# ─────────── SALES REPORT (Admin chart/report) ───────────
+# NOTE: agar tumhare views me field names different hon (e.g. "day" instead of "date"),
+# to sirf yahan field names adjust kar lena.
 
 class SalesRowSerializer(serializers.Serializer):
-    day = serializers.DateField()
+    """
+    Admin sales report ke liye generic row.
+    Typical pattern:
+      {"date": <date>, "orders": <int>, "revenue": <decimal>}
+    """
+    date = serializers.DateField()
     orders = serializers.IntegerField()
-    revenue = serializers.DecimalField(max_digits=14, decimal_places=2)
+    revenue = serializers.DecimalField(max_digits=12, decimal_places=2)
