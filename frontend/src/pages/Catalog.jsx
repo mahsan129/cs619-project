@@ -1,12 +1,16 @@
 // src/pages/Catalog.jsx
-import { useEffect, useState } from "react";
+import { useEffect, useState, useContext } from "react";
+import { useNavigate } from "react-router-dom";
 import api from "../api/client";
 import "../styles/Catalog.css";
+import { CartContext } from "../context/CartContext";
+import { AuthContext } from "../context/AuthContext";
 
 export default function Catalog() {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [categories, setCategories] = useState([]);
 
   // Filters + pagination
   const [page, setPage] = useState(1);
@@ -14,6 +18,19 @@ export default function Catalog() {
   const [minPrice, setMinPrice] = useState("");
   const [maxPrice, setMaxPrice] = useState("");
   const [search, setSearch] = useState("");
+
+  // Load categories from backend on mount
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await api.get("/categories/");
+        const data = Array.isArray(res.data) ? res.data : res.data.results ?? [];
+        setCategories(data);
+      } catch (err) {
+        console.warn("Failed to load categories", err);
+      }
+    })();
+  }, []);
 
   // 🔁 Load from backend whenever filters change
   useEffect(() => {
@@ -33,24 +50,25 @@ export default function Catalog() {
       if (minPrice) params.min_price = minPrice;        // optional: agar backend support kare
       if (maxPrice) params.max_price = maxPrice;
 
-      // baseURL = "/api", to yeh call karega: GET /api/catalog/materials/
-      const res = await api.get("/catalog/materials/", { params });
+      // baseURL = "/api", to yeh call karega: GET /api/catalog/
+      const res = await api.get("/catalog/", { params });
 
       const data = res.data.results || res.data; // DRF pagination ko handle karo
 
       // Serializer: MaterialCatalogSerializer → { id, title, sku, unit, description, price, price_type }
-      const mapped = data.map((m) => ({
-        id: m.id,
-        name: m.title,
-        sku: m.sku,
-        description: m.description || "",
-        price: Number(m.price || 0),
-        unit: m.unit || "bag",
-        note:
-          m.price_type === "WHOLESALE"
-            ? "Wholesale price (builder discount)"
-            : "Retail price",
-      }));
+      const mapped = data.map((m) => {
+        // prefer retail price if available, otherwise wholesale, otherwise try annotated min_price
+        const price = Number(m.price_retail ?? m.price_wholesale ?? m.min_price ?? 0);
+        return {
+          id: m.id,
+          name: m.title,
+          sku: m.sku,
+          description: m.description || "",
+          price,
+          unit: m.unit || "bag",
+          stock_qty: m.stock_qty,
+        };
+      });
 
       setProducts(mapped);
     } catch (err) {
@@ -69,15 +87,23 @@ export default function Catalog() {
     setPage(1);
   }
 
-  // 🔹 Add to cart (URL ko apne backend ke mutabiq adjust kar sakte ho)
+  const { add: addToCart } = useContext(CartContext);
+  const { user } = useContext(AuthContext);
+  const navigate = useNavigate();
+
+  // 🔹 Add to cart using CartContext which syncs with backend
   async function handleAddToCart(productId) {
+    if (!user) {
+      alert("Please log in to add items to cart");
+      return;
+    }
     try {
-      await api.post("/cart/", { material: productId, qty: 1 });
-      // Optional: toast / message
+      await addToCart(productId, 1);
       alert("Added to cart!");
     } catch (err) {
       console.error(err);
-      alert("Failed to add to cart");
+      // show detailed server error when available
+      alert(err?.message || "Failed to add to cart");
     }
   }
 
@@ -132,59 +158,28 @@ export default function Catalog() {
                 type="radio"
                 name="cat"
                 checked={category === ""}
-                onChange={() => setCategory("")}
+                onChange={() => {
+                  setPage(1);
+                  setCategory("");
+                }}
               />{" "}
-              All
+              All Categories
             </label>
 
-            <label className="filter-check">
-              <input
-                type="radio"
-                name="cat"
-                checked={category === "cement"}
-                onChange={() => {
-                  setPage(1);
-                  setCategory("cement");
-                }}
-              />{" "}
-              Cement
-            </label>
-            <label className="filter-check">
-              <input
-                type="radio"
-                name="cat"
-                checked={category === "steel"}
-                onChange={() => {
-                  setPage(1);
-                  setCategory("steel");
-                }}
-              />{" "}
-              Steel
-            </label>
-            <label className="filter-check">
-              <input
-                type="radio"
-                name="cat"
-                checked={category === "bricks"}
-                onChange={() => {
-                  setPage(1);
-                  setCategory("bricks");
-                }}
-              />{" "}
-              Bricks
-            </label>
-            <label className="filter-check">
-              <input
-                type="radio"
-                name="cat"
-                checked={category === "tiles"}
-                onChange={() => {
-                  setPage(1);
-                  setCategory("tiles");
-                }}
-              />{" "}
-              Tiles
-            </label>
+            {categories.map((cat) => (
+              <label key={cat.id} className="filter-check">
+                <input
+                  type="radio"
+                  name="cat"
+                  checked={category === cat.slug}
+                  onChange={() => {
+                    setPage(1);
+                    setCategory(cat.slug);
+                  }}
+                />{" "}
+                {cat.name}
+              </label>
+            ))}
           </div>
 
           {/* Price range */}
@@ -279,7 +274,7 @@ export default function Catalog() {
                   </div>
 
                   <div className="product-actions">
-                    <button className="btn-outline">View Details</button>
+                    <button className="btn-outline" onClick={() => navigate(`/materials/${p.id}`)}>View Details</button>
                     <button
                       className="btn-primary"
                       onClick={() => handleAddToCart(p.id)}

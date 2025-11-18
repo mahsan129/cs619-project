@@ -1,24 +1,22 @@
 # orders/views.py
 from decimal import Decimal
 from django.db import transaction
-from django.db.models import Prefetch
+from django.db.models import Prefetch, Sum, Count
+from django.utils import timezone
+from datetime import timedelta
 from rest_framework import viewsets, status
 from rest_framework.decorators import action, api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
-from rest_framework import viewsets
 
-
-from .models import CartItem, Address, Order, OrderItem
-from .serializers import CartItemSerializer, CheckoutSerializer, OrderSerializer, OrderListSerializer
+from .models import CartItem, Address, Order, OrderItem, Review
+from .serializers import CartItemSerializer, CheckoutSerializer, OrderSerializer, OrderListSerializer, ReviewSerializer, SalesRowSerializer
 from products.models import PriceTier, Material
-from .serializers import ReviewSerializer, SalesRowSerializer
 
 from io import BytesIO
-from django.http import HttpResponse
+from django.http import HttpResponse, HttpResponseForbidden
 from django.template.loader import get_template
 from xhtml2pdf import pisa
-from .models import Order
 
 
 
@@ -36,13 +34,18 @@ class CartViewSet(viewsets.ModelViewSet):
     serializer_class = CartItemSerializer
 
     def get_queryset(self):
-        return (
+        qs = (
             CartItem.objects
             .filter(user=self.request.user)
             .select_related("material")
             .prefetch_related(Prefetch("material__prices", queryset=PriceTier.objects.all()))
             .order_by("id")
         )
+        # allow filtering cart items by material category slug: /api/cart/?category=<slug>
+        cat = self.request.query_params.get("category")
+        if cat:
+            qs = qs.filter(material__category__slug=cat)
+        return qs
 
     def get_serializer_context(self):
         ctx = super().get_serializer_context()
@@ -80,7 +83,10 @@ def checkout_view(request):
     POST /api/orders/checkout/
     Body:
     {
-      "address": { "line1": "...", "city": "...", "state": "", "zip": "", "phone": "..." }
+      "address": { "line1": "...", "city": "...", "state": "", "zip": "", "phone": "..." },
+      "cart_item_ids": [1, 3, 5],  // optional: if provided, only checkout these items
+      "payment_method": "card" or "cod",
+      "delivery_charges": 500
     }
     Steps:
       - Validate address
@@ -88,11 +94,14 @@ def checkout_view(request):
       - Validate stock for each material
       - Create Order + OrderItems
       - Decrement stock
-      - Clear cart
+      - Remove checked-out items from cart
     """
     ser = CheckoutSerializer(data=request.data)
     ser.is_valid(raise_exception=True)
     addr_data = ser.validated_data["address"]
+    cart_item_ids = request.data.get("cart_item_ids", [])
+    payment_method = request.data.get("payment_method", "cod")
+    delivery_charges = Decimal(str(request.data.get("delivery_charges", 0)))
 
     # load cart with prices
     cart_qs = (CartItem.objects
@@ -100,6 +109,10 @@ def checkout_view(request):
                .select_related("material")
                .prefetch_related(Prefetch("material__prices", queryset=PriceTier.objects.all()))
                .order_by("id"))
+    
+    # Filter by cart_item_ids if provided
+    if cart_item_ids:
+        cart_qs = cart_qs.filter(id__in=cart_item_ids)
     cart = list(cart_qs)
     if not cart:
         return Response({"detail": "Cart is empty"}, status=400)
@@ -139,7 +152,9 @@ def checkout_view(request):
             status="PLACED",
             subtotal=Decimal("0.00"),
             tax=Decimal("0.00"),
+            delivery_charges=delivery_charges,
             total=Decimal("0.00"),
+            payment_method=payment_method,
         )
 
         subtotal = Decimal("0.00")
@@ -168,15 +183,43 @@ def checkout_view(request):
         # simple tax = 0 for now (can compute later)
         order.subtotal = subtotal
         order.tax = Decimal("0.00")
-        order.total = subtotal + order.tax
+        order.total = subtotal + order.tax + delivery_charges
         order.save(update_fields=["subtotal", "tax", "total"])
 
-        # clear cart
-        CartItem.objects.filter(user=request.user).delete()
+        # clear only the checked-out items from cart
+        CartItem.objects.filter(id__in=[it.id for it in cart]).delete()
 
     # return summary
     out = OrderSerializer(order)
     return Response(out.data, status=201)
+
+class ReviewViewSet(viewsets.ModelViewSet):
+    """
+    Reviews for orders:
+      POST /api/reviews/ -> {order, rating, comment}
+      GET /api/reviews/ -> my reviews (or all if admin)
+      PATCH /api/reviews/{id}/ -> update
+    """
+    permission_classes = [IsAuthenticated]
+    serializer_class = ReviewSerializer
+
+    def get_queryset(self):
+        qs = Review.objects.all().order_by("-created_at")
+        user = self.request.user
+        if getattr(user, "role", "") != "ADMIN":
+            qs = qs.filter(order__user=user)
+        return qs
+
+    def create(self, request, *args, **kwargs):
+        order_id = request.data.get("order")
+        if Review.objects.filter(order_id=order_id).exists():
+            return Response({"detail": "Review already exists for this order"}, status=400)
+        try:
+            order = Order.objects.get(id=order_id, user=request.user)
+        except Order.DoesNotExist:
+            return Response({"detail": "Order not found"}, status=404)
+        return super().create(request, *args, **kwargs)
+
 
 ALLOWED_STATUSES = {"PLACED", "CONFIRMED", "DISPATCHED", "DELIVERED", "CANCELLED"}
 

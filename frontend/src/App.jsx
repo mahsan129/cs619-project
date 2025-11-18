@@ -14,9 +14,12 @@ import Cart from "./pages/Cart";
 import Checkout from "./pages/Checkout";
 import MyOrders from "./pages/MyOrders";
 import AdminOrders from "./pages/AdminOrders";   // ✅ yahi admin ki file hai
+import AdminMaterials from "./pages/AdminMaterials";
 import Inventory from "./pages/Inventory";
 import BulkRequests from "./pages/BulkRequests";
 import SupplierBids from "./pages/SupplierBids";
+import ProductDetail from "./pages/ProductDetail";
+import WholesalerInventory from "./pages/WholesalerInventory";
 
 function WithNav({ children }) {
   return (
@@ -45,6 +48,14 @@ export default function App() {
             </WithNav>
           }
         />
+        <Route
+          path="/admin/materials"
+          element={
+            <WithNav>
+              <AdminMaterials />
+            </WithNav>
+          }
+        />
       </Route>
 
       {/* ─── Protected Routes ─── */}
@@ -53,9 +64,11 @@ export default function App() {
         <Route path="/catalog"   element={<WithNav><Catalog /></WithNav>} />
         <Route path="/cart"      element={<WithNav><Cart /></WithNav>} />
         <Route path="/checkout"  element={<WithNav><Checkout /></WithNav>} />
+        <Route path="/materials/:id" element={<WithNav><ProductDetail /></WithNav>} />
         <Route path="/orders"    element={<WithNav><MyOrders /></WithNav>} />
         <Route path="/admin-orders" element={<WithNav><AdminOrders /></WithNav>} />
         <Route path="/inventory" element={<WithNav><Inventory /></WithNav>} />
+        <Route path="/wholesaler/inventory" element={<WithNav><WholesalerInventory /></WithNav>} />
         <Route path="/bulk-requests" element={<WithNav><BulkRequests /></WithNav>} />
         <Route path="/bids"      element={<WithNav><SupplierBids /></WithNav>} />
       </Route>

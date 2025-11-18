@@ -6,12 +6,8 @@ from .views import register_view, me_view
 
 urlpatterns = [
     # Auth
-     path("auth/register/", register_view, name="register"),  # /api/auth/register/
-    path("auth/me/", me_view, name="me"), 
-    # path("auth/register/", RegisterView.as_view(), name="auth-register"),
-    path("auth/login/",    TokenObtainPairView.as_view(), name="auth-login"),
-    path("auth/refresh/",  TokenRefreshView.as_view(),    name="auth-refresh"),
-
-    # Current user
+    path("auth/register/", register_view, name="register"),
+    path("auth/login/", TokenObtainPairView.as_view(), name="auth-login"),
+    path("auth/refresh/", TokenRefreshView.as_view(), name="auth-refresh"),
     path("auth/me/", me_view, name="auth-me"),
 ]

@@ -23,6 +23,13 @@ class Material(Timestamped):
     stock_qty = models.PositiveIntegerField(default=0)
     min_stock = models.PositiveIntegerField(default=0)
     description = models.TextField(blank=True)
+    # Suppliers providing this material. Uses a through model in the suppliers app.
+    suppliers = models.ManyToManyField(
+        "suppliers.Supplier",
+        through="suppliers.MaterialSupplier",
+        related_name="materials",
+        blank=True,
+    )
     def __str__(self): return f"{self.title} ({self.sku})"
 
 class PriceTier(Timestamped):

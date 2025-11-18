@@ -6,8 +6,22 @@ export default function MyOrders() {
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState("");
-
   
+  const downloadInvoice = async (id) => {
+    try {
+      const res = await client.get(`/orders/${id}/invoice.pdf`, { responseType: "blob" });
+      const blob = new Blob([res.data], { type: "application/pdf" });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `invoice_${id}.pdf`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      alert("Failed to download invoice");
+      console.error(e);
+    }
+  };
 
   useEffect(() => {
     (async () => {
@@ -60,19 +74,4 @@ export default function MyOrders() {
    
     </div>
   );
-  const downloadInvoice = async (id) => {
-  try {
-    const res = await client.get(`/orders/${id}/invoice.pdf`, { responseType: "blob" });
-    const blob = new Blob([res.data], { type: "application/pdf" });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `invoice_${id}.pdf`;
-    a.click();
-    URL.revokeObjectURL(url);
-  } catch (e) {
-    alert("Failed to download invoice");
-    console.error(e);
-  }
-};
 }

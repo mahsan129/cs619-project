@@ -9,21 +9,33 @@ export default function CartProvider({ children }) {
   const [items, setItems] = useState([]);
   const [summary, setSummary] = useState({ count: 0, subtotal: 0 });
 
-  const load = useCallback(async () => {
+  // load optionally accepts a category slug to request server-side filtered cart
+  const load = useCallback(async (category = "") => {
     if (!tokens?.access) { setItems([]); setSummary({ count: 0, subtotal: 0 }); return; }
+    const params = category ? { params: { category } } : {};
     const [listRes, sumRes] = await Promise.all([
-      client.get("/cart/"),
-      client.get("/cart/summary/"),
+      client.get("/cart/", params),
+      client.get("/cart/summary/", params),
     ]);
-    setItems(listRes.data);
-    setSummary(sumRes.data);
+    // DRF may return a paginated response {count, next, previous, results: [...]}
+    const listData = listRes?.data?.results ?? listRes?.data ?? [];
+    setItems(Array.isArray(listData) ? listData : []);
+    setSummary(sumRes?.data ?? { count: 0, subtotal: 0 });
   }, [tokens]);
 
   useEffect(() => { load(); }, [load]);
 
   const add = useCallback(async (materialId, qty = 1) => {
-    await client.post("/cart/", { material: materialId, qty });
-    await load();
+    try {
+      await client.post("/cart/", { material: materialId, qty });
+      await load();
+    } catch (err) {
+      const data = err?.response?.data;
+      const msg = data?.detail ? data.detail : (data ? JSON.stringify(data) : err.message);
+      const e = new Error(msg);
+      e.original = err;
+      throw e;
+    }
   }, [load]);
 
   const updateQty = useCallback(async (id, qty) => {

@@ -12,7 +12,8 @@ export default function ProductCard({ item }) {
       await add(item.id, 1);   // item.id == material id from catalog API
     } catch (e) {
       console.error(e);
-      alert("Failed to add to cart.");
+      // show detailed server message when available
+      alert(e.message || "Failed to add to cart.");
     } finally {
       setAdding(false);
     }

@@ -39,6 +39,8 @@ urlpatterns = [
     path("api/", include("users.urls")),
     path("api/", include("products.urls")),
     path("api/", include("orders.urls")),
+    path("api/", include("bids.urls")),
+    path("api/", include("suppliers.urls")),
 ]
 
 # Custom JSON error handlers

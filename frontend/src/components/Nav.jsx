@@ -8,12 +8,16 @@ const linksByRole = {
     { to: "/dashboard", label: "Dashboard" },
     { to: "/catalog", label: "Catalog" },
     { to: "/admin-orders", label: "Orders Board" },
+    { to: "/products", label: "Manage Products" },
+    { to: "/users", label: "Manage Users" },
+    { to: "/admin", label: "Admin Panel" },
     { to: "/reports", label: "Reports" },
   ],
   WHOLESALER: [
     { to: "/dashboard", label: "Dashboard" },
     { to: "/catalog", label: "Catalog" },
     { to: "/bulk-requests", label: "Bulk Requests" },
+    { to: "/wholesaler/inventory", label: "Manage Inventory" },
   ],
   RETAILER: [
     { to: "/dashboard", label: "Dashboard" },

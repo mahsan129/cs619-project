@@ -12,6 +12,10 @@ class CartItemSerializer(serializers.ModelSerializer):
     material_title = serializers.ReadOnlyField(source="material.title", default=None)
     material_sku = serializers.ReadOnlyField(source="material.sku", default=None)
     unit = serializers.ReadOnlyField(source="material.unit", default=None)
+    material_category = serializers.ReadOnlyField(source="material.category.name", default=None)
+    material_category_slug = serializers.ReadOnlyField(source="material.category.slug", default=None)
+    price = serializers.SerializerMethodField()
+    line_total = serializers.SerializerMethodField()
 
     class Meta:
         model = CartItem
@@ -21,8 +25,28 @@ class CartItemSerializer(serializers.ModelSerializer):
             "material_title",
             "material_sku",
             "unit",
+            "material_category",
+            "material_category_slug",
             "qty",
+            "price",
+            "line_total",
         ]
+
+    def get_price(self, obj):
+        # Determine effective price based on serializer context role
+        role = self.context.get("role")
+        # material.prices is a related name to PriceTier
+        prices = {p.type: p.price for p in obj.material.prices.all()}
+        desired = "WHOLESALE" if (role or "").upper() in ("WHOLESALER", "ADMIN") else "RETAIL"
+        price = prices.get(desired) or prices.get("RETAIL") or prices.get("WHOLESALE")
+        return price or 0
+
+    def get_line_total(self, obj):
+        try:
+            p = self.get_price(obj)
+            return p * obj.qty
+        except Exception:
+            return 0
 
 
 class CartSerializer(serializers.Serializer):
@@ -45,15 +69,17 @@ class AddressSerializer(serializers.ModelSerializer):
         fields = ["id", "line1", "city", "state", "zip", "phone"]
 
 
-class CheckoutSerializer(AddressSerializer):
+class CheckoutSerializer(serializers.Serializer):
     """
-    Checkout form ke fields (shipping address).
-    Views mein:
-        s = CheckoutSerializer(data=request.data)
-        s.is_valid(raise_exception=True)
-        data = s.validated_data
+    Wrapper serializer expecting a nested `address` object:
+
+    {
+      "address": { "line1": "...", "city": "...", "phone": "..." }
+    }
+
+    This matches what the frontend sends in `Checkout.jsx`.
     """
-    pass
+    address = AddressSerializer()
 
 
 # ─────────── ORDERS (detail + items) ───────────
@@ -87,7 +113,9 @@ class OrderSerializer(serializers.ModelSerializer):
             "status",
             "subtotal",
             "tax",
+            "delivery_charges",
             "total",
+            "payment_method",
             "created_at",
             "items",
         ]
@@ -108,7 +136,9 @@ class OrderListSerializer(serializers.ModelSerializer):
             "status",
             "subtotal",
             "tax",
+            "delivery_charges",
             "total",
+            "payment_method",
             "created_at",
             "items_count",
         ]

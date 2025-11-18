@@ -2,42 +2,8 @@
 
 from rest_framework import serializers
 
-# yeh models is app (products) se
 from .models import Category, Material, PriceTier, Alert
-
-# yeh models orders app se (YAHI PEHLE GALTI THI)
-from orders.models import Order, OrderItem
-
-
-# ─────────── Cart serializers (Order / OrderItem ke sath) ───────────
-
-class CartItemSerializer(serializers.ModelSerializer):
-    material_title = serializers.ReadOnlyField(source="material.title")
-    material_sku = serializers.ReadOnlyField(source="material.sku")
-
-    class Meta:
-        model = OrderItem
-        fields = [
-            "id",
-            "material",
-            "material_title",
-            "material_sku",
-            "quantity",
-            "price",
-        ]
-
-
-class CartSerializer(serializers.ModelSerializer):
-    items = CartItemSerializer(many=True, read_only=True)
-    total = serializers.SerializerMethodField()
-
-    class Meta:
-        model = Order
-        fields = ["id", "status", "created_at", "items", "total"]
-
-    def get_total(self, obj):
-        # Order.items related_name ke mutabiq
-        return sum((i.quantity * i.price for i in obj.items.all()))
+from suppliers.models import Supplier
 
 
 # ─────────── Category / PriceTier / Material ───────────
@@ -57,6 +23,7 @@ class PriceTierSerializer(serializers.ModelSerializer):
 class MaterialSerializer(serializers.ModelSerializer):
     category_name = serializers.ReadOnlyField(source="category.name")
     prices = PriceTierSerializer(many=True, read_only=True)
+    suppliers = serializers.SerializerMethodField()
 
     class Meta:
         model = Material
@@ -71,8 +38,16 @@ class MaterialSerializer(serializers.ModelSerializer):
             "min_stock",
             "description",
             "prices",
+            "suppliers",
             "created_at",
             "updated_at",
+        ]
+
+    def get_suppliers(self, obj):
+        # return simple supplier info
+        return [
+            {"id": s.id, "name": s.name, "rating": float(s.rating) if s.rating is not None else None}
+            for s in obj.suppliers.all()
         ]
 
 
@@ -80,8 +55,10 @@ class MaterialSerializer(serializers.ModelSerializer):
 
 class MaterialCatalogSerializer(serializers.ModelSerializer):
     category_name = serializers.ReadOnlyField(source="category.name")
-    price = serializers.SerializerMethodField()
-    price_type = serializers.SerializerMethodField()
+    price_retail = serializers.SerializerMethodField()
+    price_wholesale = serializers.SerializerMethodField()
+    prices = PriceTierSerializer(many=True, read_only=True)
+    suppliers = serializers.SerializerMethodField()
 
     class Meta:
         model = Material
@@ -95,9 +72,21 @@ class MaterialCatalogSerializer(serializers.ModelSerializer):
             "stock_qty",
             "min_stock",
             "description",
-            "price",
-            "price_type",
+            "price_retail",
+            "price_wholesale",
+            "prices",
+            "suppliers",
+            "created_at",
+            "updated_at",
         ]
+
+    def get_price_retail(self, obj):
+        prices = {p.type: p.price for p in obj.prices.all()}
+        return prices.get("RETAIL")
+
+    def get_price_wholesale(self, obj):
+        prices = {p.type: p.price for p in obj.prices.all()}
+        return prices.get("WHOLESALE")
 
     def _pick_price(self, obj, desired):
         """
@@ -123,6 +112,9 @@ class MaterialCatalogSerializer(serializers.ModelSerializer):
         desired = "WHOLESALE" if role in ("WHOLESALER", "ADMIN") else "RETAIL"
         _, t = self._pick_price(obj, desired)
         return t
+
+    def get_suppliers(self, obj):
+        return [{"id": s.id, "name": s.name} for s in obj.suppliers.all()]
 
 
 # ─────────── Alert Serializer (low stock alerts) ───────────
